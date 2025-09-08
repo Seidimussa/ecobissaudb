@@ -1,0 +1,4 @@
+(Este middleware requer a instalação do cloudinary e multer-storage-cloudinary. Certifique-se de que estão no seu package.json e que as variáveis de ambiente CLOUDINARY_ estão no seu .env)*
+
+
+npm install uuid

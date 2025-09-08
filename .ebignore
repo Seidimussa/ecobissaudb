@@ -1,0 +1,9 @@
+# Ignorar as dependências, pois o servidor irá instalá-las
+node_modules/
+
+# Ignorar o ficheiro de ambiente local
+.env
+
+# Ignorar ficheiros do Git
+.git/
+.gitignore
