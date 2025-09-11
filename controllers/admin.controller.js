@@ -1,3 +1,4 @@
+import mongoose from 'mongoose'; // Importação crucial
 import User from '../models/User.model.js';
 import Report from '../models/Report.model.js';
 import Certificate from '../models/Certificate.model.js';
@@ -8,6 +9,8 @@ import Setting from '../models/Setting.model.js';
 import Enrollment from '../models/Enrollment.model.js';
 import ContactMessage from '../models/ContactMessage.model.js';
 import Conversation from '../models/Conversation.model.js';
+import Partner from '../models/Partner.model.js';
+import Payment from '../models/Payment.model.js'; // Importação correta do modelo
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 import asyncHandler from 'express-async-handler';
@@ -52,6 +55,11 @@ export const sendMessageToUsers = asyncHandler(async (req, res) => {
     }));
     await Promise.all(conversationPromises);
     res.status(201).json(new ApiResponse(201, null, `${recipients.length} conversa(s) iniciada(s) com sucesso.`));
+});
+
+export const getAllConversations = asyncHandler(async (req, res) => {
+    const conversations = await Conversation.find({}).populate('participants', 'name email').sort({ updatedAt: -1 });
+    res.status(200).json(new ApiResponse(200, conversations, "Todas as conversas foram encontradas."));
 });
 
 // =============================================
@@ -110,19 +118,60 @@ export const unblockUser = asyncHandler(async (req, res) => {
 });
 
 // =============================================
+// GESTÃO DE INSCRIÇÕES MANUAIS
+// =============================================
+export const createManualEnrollment = asyncHandler(async (req, res) => {
+    const { userId, courseId, reason } = req.body;
+    if (!userId || !courseId) throw new ApiError(400, "O ID do utilizador e o ID do curso são obrigatórios.");
+    const existingEnrollment = await Enrollment.findOne({ user: userId, course: courseId });
+    if (existingEnrollment) throw new ApiError(409, "Este utilizador já está inscrito neste curso.");
+    const course = await Course.findById(courseId);
+    if (!course) throw new ApiError(404, "Curso não encontrado.");
+    const enrollment = await Enrollment.create({ user: userId, course: courseId, status: 'active' });
+
+    await Payment.create({
+        user: userId,
+        enrollment: enrollment._id,
+        amount: 0,
+        currency: 'XOF',
+        status: 'completed',
+        provider: `manual_${reason || 'cash'}`,
+        providerTransactionId: `manual-${enrollment._id}-${Date.now()}`
+    });
+    res.status(201).json(new ApiResponse(201, enrollment, "Inscrição manual criada com sucesso."));
+});
+
+// =============================================
+// GESTÃO DE PARCEIROS
+// =============================================
+export const addPartner = asyncHandler(async (req, res) => {
+    const { name, websiteUrl } = req.body;
+    if (!name || !req.file) throw new ApiError(400, "O nome do parceiro e o logótipo são obrigatórios.");
+    const newPartner = await Partner.create({ name, websiteUrl, logoUrl: req.file.path });
+    res.status(201).json(new ApiResponse(201, newPartner, "Parceiro adicionado com sucesso."));
+});
+
+export const deletePartner = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const partner = await Partner.findById(id);
+    if (!partner) throw new ApiError(404, "Parceiro não encontrado.");
+    await partner.deleteOne();
+    res.status(200).json(new ApiResponse(200, null, "Parceiro removido com sucesso."));
+});
+
+
+// =============================================
 // GESTÃO DE DENÚNCIAS
 // =============================================
 export const getAllReports = asyncHandler(async (req, res) => {
     const reports = await Report.find({}).populate('user', 'name email').sort({ createdAt: -1 });
     res.status(200).json(new ApiResponse(200, reports));
 });
-
 export const getReportById = asyncHandler(async (req, res) => {
     const report = await Report.findById(req.params.id).populate('user', 'name email');
     if (!report) throw new ApiError(404, 'Denúncia não encontrada.');
     res.status(200).json(new ApiResponse(200, report));
 });
-
 export const updateReportStatus = asyncHandler(async (req, res) => {
     const { status } = req.body;
     if (!['pending', 'resolved', 'rejected'].includes(status)) throw new ApiError(400, 'Status inválido.');
@@ -140,18 +189,15 @@ export const createContent = asyncHandler(async (req, res) => {
     const newContent = await Course.create(contentData);
     res.status(201).json(new ApiResponse(201, newContent, 'Conteúdo criado com sucesso.'));
 });
-
 export const getAllContent = asyncHandler(async (req, res) => {
     const content = await Course.find({}).sort({ createdAt: -1 });
     res.status(200).json(new ApiResponse(200, content));
 });
-
 export const getContentByIdAdmin = asyncHandler(async (req, res) => {
     const content = await Course.findById(req.params.id);
     if (!content) throw new ApiError(404, 'Conteúdo não encontrado.');
     res.status(200).json(new ApiResponse(200, content));
 });
-
 export const updateContent = asyncHandler(async (req, res) => {
     const contentData = { ...req.body };
     if (req.file) contentData.thumbnailUrl = req.file.path;
@@ -159,7 +205,6 @@ export const updateContent = asyncHandler(async (req, res) => {
     if (!updatedContent) throw new ApiError(404, 'Conteúdo não encontrado.');
     res.status(200).json(new ApiResponse(200, updatedContent, 'Conteúdo atualizado.'));
 });
-
 export const deleteContent = asyncHandler(async (req, res) => {
     const content = await Course.findById(req.params.id);
     if (!content) throw new ApiError(404, 'Conteúdo não encontrado.');
@@ -176,18 +221,15 @@ export const createTip = asyncHandler(async (req, res) => {
     const newTip = await Tip.create(tipData);
     res.status(201).json(new ApiResponse(201, newTip, 'Dica criada com sucesso.'));
 });
-
 export const getAllTips = asyncHandler(async (req, res) => {
     const tips = await Tip.find({}).sort({ createdAt: -1 });
     res.status(200).json(new ApiResponse(200, tips));
 });
-
 export const getTipByIdAdmin = asyncHandler(async (req, res) => {
     const tip = await Tip.findById(req.params.id);
     if (!tip) throw new ApiError(404, 'Dica não encontrada.');
     res.status(200).json(new ApiResponse(200, tip));
 });
-
 export const updateTip = asyncHandler(async (req, res) => {
     const tipData = { ...req.body };
     if (req.file) tipData.imageUrl = req.file.path;
@@ -195,7 +237,6 @@ export const updateTip = asyncHandler(async (req, res) => {
     if (!updatedTip) throw new ApiError(404, 'Dica não encontrada.');
     res.status(200).json(new ApiResponse(200, updatedTip, 'Dica atualizada.'));
 });
-
 export const deleteTip = asyncHandler(async (req, res) => {
     const tip = await Tip.findById(req.params.id);
     if (!tip) throw new ApiError(404, 'Dica não encontrada.');
@@ -212,18 +253,15 @@ export const createCommunity = asyncHandler(async (req, res) => {
     const newCommunity = await Community.create(communityData);
     res.status(201).json(new ApiResponse(201, newCommunity, 'Comunidade criada com sucesso.'));
 });
-
 export const getAllCommunities = asyncHandler(async (req, res) => {
     const communities = await Community.find({}).populate('admin', 'name').sort({ name: 1 });
     res.status(200).json(new ApiResponse(200, communities));
 });
-
 export const getCommunityByIdAdmin = asyncHandler(async (req, res) => {
     const community = await Community.findById(req.params.id);
     if (!community) throw new ApiError(404, 'Comunidade não encontrada.');
     res.status(200).json(new ApiResponse(200, community));
 });
-
 export const updateCommunity = asyncHandler(async (req, res) => {
     const communityData = { ...req.body };
     if (req.file) communityData.bannerImageUrl = req.file.path;
@@ -231,13 +269,11 @@ export const updateCommunity = asyncHandler(async (req, res) => {
     if (!updatedCommunity) throw new ApiError(404, 'Comunidade não encontrada.');
     res.status(200).json(new ApiResponse(200, updatedCommunity, 'Comunidade atualizada.'));
 });
-
 export const approveCommunity = asyncHandler(async (req, res) => {
     const community = await Community.findByIdAndUpdate(req.params.id, { status: 'approved' }, { new: true });
     if (!community) throw new ApiError(404, 'Comunidade não encontrada.');
     res.status(200).json(new ApiResponse(200, community, 'Comunidade aprovada.'));
 });
-
 export const getPendingCommunities = asyncHandler(async (req, res) => {
     const pending = await Community.find({ status: 'pending_approval' }).populate('admin', 'name email').sort({ createdAt: 1 });
     res.status(200).json(new ApiResponse(200, pending));
@@ -250,13 +286,11 @@ export const getPendingCertificates = asyncHandler(async (req, res) => {
     const certificates = await Certificate.find({ status: 'pending_approval' }).populate('user', 'name email').populate('course', 'title').sort({ createdAt: 1 });
     res.status(200).json(new ApiResponse(200, certificates));
 });
-
 export const issueCertificate = asyncHandler(async (req, res) => {
     const certificate = await Certificate.findByIdAndUpdate(req.params.id, { status: 'issued' }, { new: true });
     if (!certificate) throw new ApiError(404, 'Certificado não encontrado.');
     res.status(200).json(new ApiResponse(200, certificate, 'Certificado emitido com sucesso.'));
 });
-
 export const revokeCertificate = asyncHandler(async (req, res) => {
     const certificate = await Certificate.findByIdAndUpdate(req.params.id, { status: 'revoked' }, { new: true });
     if (!certificate) throw new ApiError(404, 'Certificado não encontrado.');
@@ -273,19 +307,11 @@ const getOrCreateSettings = async () => {
     }
     return settings;
 };
-
 export const getSettings = asyncHandler(async (req, res) => {
     const settings = await getOrCreateSettings();
     res.status(200).json(new ApiResponse(200, settings));
 });
-
 export const updateSettings = asyncHandler(async (req, res) => {
     const settings = await Setting.findOneAndUpdate({ singleton: true }, req.body, { new: true, upsert: true });
     res.status(200).json(new ApiResponse(200, settings, 'Configurações atualizadas.'));
-});
-export const getAllConversations = asyncHandler(async (req, res) => {
-    const conversations = await Conversation.find({})
-        .populate('participants', 'name email')
-        .sort({ updatedAt: -1 });
-    res.status(200).json(new ApiResponse(200, conversations, "Todas as conversas foram encontradas."));
 });

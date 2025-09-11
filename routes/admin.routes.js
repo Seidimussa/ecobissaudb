@@ -6,6 +6,8 @@ import {
     // Dashboard
     getAdminDashboardSummary, 
 
+    createManualEnrollment, // <-- IMPORTAR
+
     // Gestão de Utilizadores
     getAllUsers, getUserById, updateUserByAdmin, deleteUser,
 
@@ -82,6 +84,9 @@ router.post('/certificates/:id/revoke', revokeCertificate);
 
 // --- ROTAS DE GESTÃO DE CONFIGURAÇÕES ---
 router.route('/settings').get(getSettings).put(updateSettings);
+
+// --- GESTÃO DE INSCRIÇÕES ---
+router.post('/enrollments/manual', createManualEnrollment); // <-- NOVA ROTA
 
 // A rota de análises foi movida para /routes/statistics.routes.js
 
