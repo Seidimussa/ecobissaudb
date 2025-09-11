@@ -1,4 +1,4 @@
-import mongoose from 'mongoose'; // Importação crucial
+import mongoose from 'mongoose';
 import User from '../models/User.model.js';
 import Report from '../models/Report.model.js';
 import Certificate from '../models/Certificate.model.js';
@@ -10,7 +10,8 @@ import Enrollment from '../models/Enrollment.model.js';
 import ContactMessage from '../models/ContactMessage.model.js';
 import Conversation from '../models/Conversation.model.js';
 import Partner from '../models/Partner.model.js';
-import Payment from '../models/Payment.model.js'; // Importação correta do modelo
+import Payment from '../models/Payment.model.js';
+import BlogPost from '../models/BlogPost.model.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 import asyncHandler from 'express-async-handler';
@@ -77,13 +78,11 @@ export const getAllUsers = asyncHandler(async (req, res) => {
     const users = await User.find({}).select('-password').sort({ createdAt: -1 });
     res.status(200).json(new ApiResponse(200, users));
 });
-
 export const getUserById = asyncHandler(async (req, res) => {
     const user = await User.findById(req.params.id).select('-password');
     if (!user) throw new ApiError(404, 'Utilizador não encontrado.');
     res.status(200).json(new ApiResponse(200, user));
 });
-
 export const updateUserByAdmin = asyncHandler(async (req, res) => {
     const { name, email, role, phone } = req.body;
     const user = await User.findById(req.params.id);
@@ -97,20 +96,17 @@ export const updateUserByAdmin = asyncHandler(async (req, res) => {
     delete userObject.password;
     res.status(200).json(new ApiResponse(200, userObject, 'Utilizador atualizado com sucesso.'));
 });
-
 export const deleteUser = asyncHandler(async (req, res) => {
     const user = await User.findById(req.params.id);
     if (!user) throw new ApiError(404, 'Utilizador não encontrado.');
     await user.deleteOne();
     res.status(200).json(new ApiResponse(200, null, 'Utilizador removido com sucesso.'));
 });
-
 export const blockUser = asyncHandler(async (req, res) => {
     const user = await User.findByIdAndUpdate(req.params.id, { isBlocked: true }, { new: true }).select('-password');
     if (!user) throw new ApiError(404, 'Utilizador não encontrado.');
     res.status(200).json(new ApiResponse(200, user, "Utilizador bloqueado com sucesso."));
 });
-
 export const unblockUser = asyncHandler(async (req, res) => {
     const user = await User.findByIdAndUpdate(req.params.id, { isBlocked: false }, { new: true }).select('-password');
     if (!user) throw new ApiError(404, 'Utilizador não encontrado.');
@@ -128,7 +124,6 @@ export const createManualEnrollment = asyncHandler(async (req, res) => {
     const course = await Course.findById(courseId);
     if (!course) throw new ApiError(404, "Curso não encontrado.");
     const enrollment = await Enrollment.create({ user: userId, course: courseId, status: 'active' });
-
     await Payment.create({
         user: userId,
         enrollment: enrollment._id,
@@ -150,7 +145,6 @@ export const addPartner = asyncHandler(async (req, res) => {
     const newPartner = await Partner.create({ name, websiteUrl, logoUrl: req.file.path });
     res.status(201).json(new ApiResponse(201, newPartner, "Parceiro adicionado com sucesso."));
 });
-
 export const deletePartner = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const partner = await Partner.findById(id);
@@ -159,6 +153,66 @@ export const deletePartner = asyncHandler(async (req, res) => {
     res.status(200).json(new ApiResponse(200, null, "Parceiro removido com sucesso."));
 });
 
+// =============================================
+// GESTÃO DE BLOG POSTS
+// =============================================
+export const createBlogPost = asyncHandler(async (req, res) => {
+    const { title, content, tags, isFeatured } = req.body;
+    if (!title || !content || !req.file) {
+        throw new ApiError(400, "Título, conteúdo e imagem de capa são obrigatórios.");
+    }
+    const isFeaturedBool = isFeatured === 'true';
+    if (isFeaturedBool) {
+        await BlogPost.updateMany({ isFeatured: true }, { isFeatured: false });
+    }
+    const newPost = await BlogPost.create({
+        title,
+        content,
+        tags: tags ? tags.split(',').map(tag => tag.trim()) : [],
+        isFeatured: isFeaturedBool,
+        coverImageUrl: req.file.path,
+        author: req.user._id
+    });
+    res.status(201).json(new ApiResponse(201, newPost, "Post do blog criado com sucesso."));
+});
+
+export const getAllBlogPosts = asyncHandler(async (req, res) => {
+    const posts = await BlogPost.find({}).populate('author', 'name').sort({ createdAt: -1 });
+    res.status(200).json(new ApiResponse(200, posts));
+});
+
+export const getBlogPostById = asyncHandler(async (req, res) => {
+    const post = await BlogPost.findById(req.params.id);
+    if (!post) throw new ApiError(404, "Post não encontrado.");
+    res.status(200).json(new ApiResponse(200, post));
+});
+
+export const updateBlogPost = asyncHandler(async (req, res) => {
+    const { title, content, tags, isFeatured } = req.body;
+    const isFeaturedBool = isFeatured === 'true';
+    const updateData = {
+        title,
+        content,
+        tags: tags ? tags.split(',').map(tag => tag.trim()) : [],
+        isFeatured: isFeaturedBool
+    };
+    if (req.file) {
+        updateData.coverImageUrl = req.file.path;
+    }
+    if (isFeaturedBool) {
+        await BlogPost.updateMany({ _id: { $ne: req.params.id }, isFeatured: true }, { isFeatured: false });
+    }
+    const updatedPost = await BlogPost.findByIdAndUpdate(req.params.id, updateData, { new: true });
+    if (!updatedPost) throw new ApiError(404, "Post não encontrado.");
+    res.status(200).json(new ApiResponse(200, updatedPost, "Post atualizado com sucesso."));
+});
+
+export const deleteBlogPost = asyncHandler(async (req, res) => {
+    const post = await BlogPost.findById(req.params.id);
+    if (!post) throw new ApiError(404, "Post não encontrado.");
+    await post.deleteOne();
+    res.status(200).json(new ApiResponse(200, null, "Post removido com sucesso."));
+});
 
 // =============================================
 // GESTÃO DE DENÚNCIAS

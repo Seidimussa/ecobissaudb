@@ -1,43 +1,31 @@
 import express from 'express';
 import { isAuthenticated, isAdmin } from '../middlewares/auth.middleware.js';
-
 import upload from '../middlewares/upload.middleware.js';
 import {
     // Dashboard
-    getAdminDashboardSummary, 
-
-    createManualEnrollment, // <-- IMPORTAR
-
-    // Gestão de Utilizadores
-    getAllUsers, getUserById, updateUserByAdmin, deleteUser,
-
-    // Gestão de Mensagens
-    sendMessageToUsers,
-    getContactMessages, // <-- IMPORTAR A NOVA FUNÇÃO
-
-    // Gestão de Denúncias
+    getAdminDashboardSummary,
+    // Utilizadores
+    getAllUsers, getUserById, updateUserByAdmin, deleteUser, blockUser, unblockUser,
+    // Inscrições Manuais
+    createManualEnrollment,
+    // Mensagens
+    sendMessageToUsers, getContactMessages, getAllConversations,
+    // Denúncias
     getAllReports, getReportById, updateReportStatus,
-
-    // Gestão de Conteúdo (Cursos, Treinamentos)
+    // Conteúdo
     createContent, getAllContent, getContentByIdAdmin, updateContent, deleteContent,
-
-    // Gestão de Dicas
+    // Dicas
     createTip, getAllTips, getTipByIdAdmin, updateTip, deleteTip,
-
-    // Gestão de Comunidades
+    // Comunidades
     createCommunity, getAllCommunities, getCommunityByIdAdmin, updateCommunity, approveCommunity, getPendingCommunities,
-
-    // Gestão de Certificados
+    // Certificados
     getPendingCertificates, issueCertificate, revokeCertificate,
-
-    // Gestão de Configurações
+    // Configurações
     getSettings, updateSettings,
-
-    getAllConversations,
-
-    // Análises (movido para statistics.routes.js)
-    // getReportsAnalytics, // Esta linha foi movida para outro ficheiro de rotas
-
+    // Parceiros
+    addPartner, deletePartner,
+    // Blog Posts
+    createBlogPost, getAllBlogPosts, getBlogPostById, updateBlogPost, deleteBlogPost
 } from '../controllers/admin.controller.js';
 
 const router = express.Router();
@@ -45,49 +33,60 @@ const router = express.Router();
 // Middleware global para todas as rotas de admin
 router.use(isAuthenticated, isAdmin);
 
-// --- ROTAS DO DASHBOARD ---
+// --- DASHBOARD ---
 router.get('/dashboard/summary', getAdminDashboardSummary);
 
-// --- ROTAS DE GESTÃO DE UTILIZADORES ---
+// --- GESTÃO DE UTILIZADORES ---
 router.route('/users').get(getAllUsers);
 router.route('/users/:id').get(getUserById).put(updateUserByAdmin).delete(deleteUser);
+router.put('/users/:id/block', blockUser);
+router.put('/users/:id/unblock', unblockUser);
 
-// --- ROTAS DE GESTÃO DE MENSAGENS ---
+// --- GESTÃO DE MENSAGENS E CONVERSAS ---
 router.post('/messages/send', sendMessageToUsers);
 router.get('/contact-messages', getContactMessages);
-router.get('/conversations', getAllConversations); // <-- NOVA ROTA
+router.get('/conversations', getAllConversations);
 
-// <-- ADICIONAR ESTA NOVA ROTA
+// --- GESTÃO DE INSCRIÇÕES MANUAIS ---
+router.post('/enrollments/manual', createManualEnrollment);
 
-// --- ROTAS DE GESTÃO DE DENÚNCIAS ---
+// --- GESTÃO DE PARCEIROS ---
+router.post('/partners', upload.single('logo'), addPartner);
+router.delete('/partners/:id', deletePartner);
+
+// --- GESTÃO DE BLOG POSTS ---
+router.route('/blog')
+    .get(getAllBlogPosts)
+    .post(upload.single('coverImage'), createBlogPost);
+router.route('/blog/:id')
+    .get(getBlogPostById)
+    .put(upload.single('coverImage'), updateBlogPost)
+    .delete(deleteBlogPost);
+
+// --- GESTÃO DE DENÚNCIAS ---
 router.route('/reports').get(getAllReports);
 router.route('/reports/:id').get(getReportById).put(updateReportStatus);
 
-// --- ROTAS DE GESTÃO DE CONTEÚDO ---
-router.route('/content').post(upload.single('thumbnail'), createContent).get(getAllContent);
+// --- GESTÃO DE CONTEÚDO (CURSOS/TREINAMENTOS) ---
+router.route('/content').get(getAllContent).post(upload.single('thumbnail'), createContent);
 router.route('/content/:id').get(getContentByIdAdmin).put(upload.single('thumbnail'), updateContent).delete(deleteContent);
 
-// --- ROTAS DE GESTÃO DE DICAS ---
-router.route('/tips').post(upload.single('image'), createTip).get(getAllTips);
+// --- GESTÃO DE DICAS ---
+router.route('/tips').get(getAllTips).post(upload.single('image'), createTip);
 router.route('/tips/:id').get(getTipByIdAdmin).put(upload.single('image'), updateTip).delete(deleteTip);
 
-// --- ROTAS DE GESTÃO DE COMUNIDADES ---
-router.route('/communities').post(upload.single('banner'), createCommunity).get(getAllCommunities);
+// --- GESTÃO DE COMUNIDADES ---
+router.route('/communities').get(getAllCommunities).post(upload.single('banner'), createCommunity);
 router.get('/communities/pending', getPendingCommunities);
 router.route('/communities/:id').get(getCommunityByIdAdmin).put(upload.single('banner'), updateCommunity);
 router.put('/communities/:id/approve', approveCommunity);
 
-// --- ROTAS DE GESTÃO DE CERTIFICADOS ---
+// --- GESTÃO DE CERTIFICADOS ---
 router.route('/certificates/pending').get(getPendingCertificates);
 router.post('/certificates/:id/issue', issueCertificate);
 router.post('/certificates/:id/revoke', revokeCertificate);
 
-// --- ROTAS DE GESTÃO DE CONFIGURAÇÕES ---
+// --- GESTÃO DE CONFIGURAÇÕES ---
 router.route('/settings').get(getSettings).put(updateSettings);
-
-// --- GESTÃO DE INSCRIÇÕES ---
-router.post('/enrollments/manual', createManualEnrollment); // <-- NOVA ROTA
-
-// A rota de análises foi movida para /routes/statistics.routes.js
 
 export default router;
