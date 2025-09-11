@@ -13,6 +13,8 @@ import tipRoutes from './tip.routes.js';
 import contactRoutes from './contact.routes.js';
 import dashboardRoutes from './dashboard.routes.js';
 import conversationRoutes from './conversation.routes.js';
+import partnerRoutes from './partner.routes.js';
+import blogRoutes from './blog.routes.js'; // <-- 1. IMPORTAR A NOVA ROTA
 
 const router = express.Router();
 
@@ -21,13 +23,14 @@ router.use('/auth', authRoutes);
 router.use('/settings', settingRoutes);
 router.use('/statistics', statisticsRoutes);
 router.use('/contact', contactRoutes);
-router.use('/tips', tipRoutes); // Dicas antes de conteúdo
+router.use('/tips', tipRoutes);
+router.use('/partners', partnerRoutes);
+router.use('/blog', blogRoutes); // <-- 2. USAR A NOVA ROTA
 
 // --- Rota de Conteúdo (Cursos e Treinamentos) ---
-// Esta rota tem um parâmetro /:id, por isso deve vir depois de rotas mais específicas
 router.use('/content', contentRoutes);
 
-// --- Rotas Protegidas (requerem login ou são de admin) ---
+// --- Rotas Protegidas ---
 router.use('/users', userRoutes);
 router.use('/reports', reportRoutes);
 router.use('/communities', communityRoutes);
