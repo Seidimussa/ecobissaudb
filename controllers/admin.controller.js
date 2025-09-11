@@ -157,23 +157,45 @@ export const deletePartner = asyncHandler(async (req, res) => {
 // GESTÃO DE BLOG POSTS
 // =============================================
 export const createBlogPost = asyncHandler(async (req, res) => {
+    // --- INÍCIO DA DEPURAÇÃO ---
+    console.log('--- A criar novo post de blog ---');
+    console.log('Dados recebidos (req.body):', req.body);
+    console.log('Ficheiro recebido (req.file):', req.file);
+    // --- FIM DA DEPURAÇÃO ---
+
     const { title, content, tags, isFeatured } = req.body;
+
     if (!title || !content || !req.file) {
         throw new ApiError(400, "Título, conteúdo e imagem de capa são obrigatórios.");
     }
+
     const isFeaturedBool = isFeatured === 'true';
-    if (isFeaturedBool) {
-        await BlogPost.updateMany({ isFeatured: true }, { isFeatured: false });
+
+    try {
+        if (isFeaturedBool) {
+            console.log('A remover o destaque de posts antigos...');
+            await BlogPost.updateMany({ isFeatured: true }, { $set: { isFeatured: false } });
+        }
+
+        console.log('A tentar criar o post no banco de dados...');
+        const newPost = await BlogPost.create({
+            title,
+            content,
+            tags: tags ? tags.split(',').map(tag => tag.trim()) : [],
+            isFeatured: isFeaturedBool,
+            coverImageUrl: req.file.path,
+            author: req.user._id
+        });
+        console.log('Post criado com sucesso:', newPost._id);
+
+        res.status(201).json(new ApiResponse(201, newPost, "Post do blog criado com sucesso."));
+
+    } catch (error) {
+        // --- DEPURAÇÃO DE ERRO ---
+        console.error('ERRO AO CRIAR O POST NO BANCO DE DADOS:', error);
+        // --- FIM DA DEPURAÇÃO DE ERRO ---
+        throw new ApiError(500, 'Ocorreu um erro interno ao guardar o post.');
     }
-    const newPost = await BlogPost.create({
-        title,
-        content,
-        tags: tags ? tags.split(',').map(tag => tag.trim()) : [],
-        isFeatured: isFeaturedBool,
-        coverImageUrl: req.file.path,
-        author: req.user._id
-    });
-    res.status(201).json(new ApiResponse(201, newPost, "Post do blog criado com sucesso."));
 });
 
 export const getAllBlogPosts = asyncHandler(async (req, res) => {
@@ -190,11 +212,11 @@ export const getBlogPostById = asyncHandler(async (req, res) => {
 export const updateBlogPost = asyncHandler(async (req, res) => {
     const { title, content, tags, isFeatured } = req.body;
     const isFeaturedBool = isFeatured === 'true';
-    const updateData = {
-        title,
-        content,
-        tags: tags ? tags.split(',').map(tag => tag.trim()) : [],
-        isFeatured: isFeaturedBool
+    const updateData = { 
+        title, 
+        content, 
+        tags: tags ? tags.split(',').map(tag => tag.trim()) : [], 
+        isFeatured: isFeaturedBool 
     };
     if (req.file) {
         updateData.coverImageUrl = req.file.path;
