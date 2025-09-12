@@ -14,7 +14,9 @@ import contactRoutes from './contact.routes.js';
 import dashboardRoutes from './dashboard.routes.js';
 import conversationRoutes from './conversation.routes.js';
 import partnerRoutes from './partner.routes.js';
-import blogRoutes from './blog.routes.js'; // <-- 1. IMPORTAR A NOVA ROTA
+import blogRoutes from './blog.routes.js';
+import courseRoutes from './course.routes.js';
+import trainingRoutes from './training.routes.js';
 
 const router = express.Router();
 
@@ -25,7 +27,9 @@ router.use('/statistics', statisticsRoutes);
 router.use('/contact', contactRoutes);
 router.use('/tips', tipRoutes);
 router.use('/partners', partnerRoutes);
-router.use('/blog', blogRoutes); // <-- 2. USAR A NOVA ROTA
+router.use('/blog', blogRoutes);
+router.use('/courses', courseRoutes);
+router.use('/trainings', trainingRoutes);
 
 // --- Rota de Conteúdo (Cursos e Treinamentos) ---
 router.use('/content', contentRoutes);

@@ -55,9 +55,32 @@ export const createReport = asyncHandler(async (req, res) => {
 });
 
 export const listPublicReports = asyncHandler(async (req, res) => {
-    // Apenas para exemplo, uma listagem pública pode não ser necessária, mas a rota existe.
-    const reports = await Report.find({}).sort({
-        createdAt: -1
-    }).limit(20);
+    const reports = await Report.find({ status: { $ne: 'rejected' } })
+        .populate('user', 'name')
+        .sort({ createdAt: -1 })
+        .limit(20);
     res.status(200).json(new ApiResponse(200, reports));
+});
+
+/**
+ * @desc    Listar denúncias do usuário
+ * @route   GET /api/reports/my-reports
+ * @access  Private
+ */
+export const getMyReports = asyncHandler(async (req, res) => {
+    const userId = req.user._id;
+    const reports = await Report.find({ user: userId })
+        .sort({ createdAt: -1 });
+    res.status(200).json(new ApiResponse(200, reports, 'Suas denúncias listadas com sucesso.'));
+});
+
+/**
+ * @desc    Obter detalhes de uma denúncia
+ * @route   GET /api/reports/:id
+ * @access  Public
+ */
+export const getReportById = asyncHandler(async (req, res) => {
+    const report = await Report.findById(req.params.id).populate('user', 'name');
+    if (!report) throw new ApiError(404, 'Denúncia não encontrada.');
+    res.status(200).json(new ApiResponse(200, report));
 });

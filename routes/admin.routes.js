@@ -25,7 +25,9 @@ import {
     // Parceiros
     addPartner, deletePartner,
     // Blog Posts
-    createBlogPost, getAllBlogPosts, getBlogPostById, updateBlogPost, deleteBlogPost
+    createBlogPost, getAllBlogPosts, getBlogPostById, updateBlogPost, deleteBlogPost,
+    // Analytics
+    getReportsAnalytics
 } from '../controllers/admin.controller.js';
 
 const router = express.Router();
@@ -71,6 +73,14 @@ router.route('/reports/:id').get(getReportById).put(updateReportStatus);
 router.route('/content').get(getAllContent).post(upload.single('thumbnail'), createContent);
 router.route('/content/:id').get(getContentByIdAdmin).put(upload.single('thumbnail'), updateContent).delete(deleteContent);
 
+// --- GESTÃO DE CURSOS ---
+router.route('/courses').get((req, res, next) => { req.query.contentType = 'course'; getAllContent(req, res, next); }).post(upload.single('thumbnail'), (req, res, next) => { req.body.contentType = 'course'; createContent(req, res, next); });
+router.route('/courses/:id').get(getContentByIdAdmin).put(upload.single('thumbnail'), updateContent).delete(deleteContent);
+
+// --- GESTÃO DE TREINAMENTOS ---
+router.route('/trainings').get((req, res, next) => { req.query.contentType = 'training'; getAllContent(req, res, next); }).post(upload.single('thumbnail'), (req, res, next) => { req.body.contentType = 'training'; createContent(req, res, next); });
+router.route('/trainings/:id').get(getContentByIdAdmin).put(upload.single('thumbnail'), updateContent).delete(deleteContent);
+
 // --- GESTÃO DE DICAS ---
 router.route('/tips').get(getAllTips).post(upload.single('image'), createTip);
 router.route('/tips/:id').get(getTipByIdAdmin).put(upload.single('image'), updateTip).delete(deleteTip);
@@ -88,5 +98,8 @@ router.post('/certificates/:id/revoke', revokeCertificate);
 
 // --- GESTÃO DE CONFIGURAÇÕES ---
 router.route('/settings').get(getSettings).put(updateSettings);
+
+// --- ANALYTICS ---
+router.get('/reports-analytics', getReportsAnalytics);
 
 export default router;

@@ -262,11 +262,19 @@ export const updateReportStatus = asyncHandler(async (req, res) => {
 export const createContent = asyncHandler(async (req, res) => {
     const contentData = { ...req.body, author: req.user._id };
     if (req.file) contentData.thumbnailUrl = req.file.path;
+    
+    // Garantir que contentType está definido
+    if (!contentData.contentType) {
+        contentData.contentType = 'course'; // padrão
+    }
+    
     const newContent = await Course.create(contentData);
-    res.status(201).json(new ApiResponse(201, newContent, 'Conteúdo criado com sucesso.'));
+    const contentTypeName = contentData.contentType === 'training' ? 'Treinamento' : 'Curso';
+    res.status(201).json(new ApiResponse(201, newContent, `${contentTypeName} criado com sucesso.`));
 });
 export const getAllContent = asyncHandler(async (req, res) => {
-    const content = await Course.find({}).sort({ createdAt: -1 });
+    const filter = req.query.contentType ? { contentType: req.query.contentType } : {};
+    const content = await Course.find(filter).sort({ createdAt: -1 });
     res.status(200).json(new ApiResponse(200, content));
 });
 export const getContentByIdAdmin = asyncHandler(async (req, res) => {
@@ -279,7 +287,8 @@ export const updateContent = asyncHandler(async (req, res) => {
     if (req.file) contentData.thumbnailUrl = req.file.path;
     const updatedContent = await Course.findByIdAndUpdate(req.params.id, contentData, { new: true });
     if (!updatedContent) throw new ApiError(404, 'Conteúdo não encontrado.');
-    res.status(200).json(new ApiResponse(200, updatedContent, 'Conteúdo atualizado.'));
+    const contentTypeName = updatedContent.contentType === 'training' ? 'Treinamento' : 'Curso';
+    res.status(200).json(new ApiResponse(200, updatedContent, `${contentTypeName} atualizado.`));
 });
 export const deleteContent = asyncHandler(async (req, res) => {
     const content = await Course.findById(req.params.id);
@@ -390,4 +399,64 @@ export const getSettings = asyncHandler(async (req, res) => {
 export const updateSettings = asyncHandler(async (req, res) => {
     const settings = await Setting.findOneAndUpdate({ singleton: true }, req.body, { new: true, upsert: true });
     res.status(200).json(new ApiResponse(200, settings, 'Configurações atualizadas.'));
+});
+
+// =============================================
+// ANALYTICS DE DENÚNCIAS
+// =============================================
+export const getReportsAnalytics = asyncHandler(async (req, res) => {
+    const [reportsByStatus, reportsByType, reportsByMonth, recentReports] = await Promise.all([
+        // Denúncias por status
+        Report.aggregate([
+            { $group: { _id: '$status', count: { $sum: 1 } } }
+        ]),
+        // Denúncias por tipo
+        Report.aggregate([
+            { $group: { _id: '$type', count: { $sum: 1 } } }
+        ]),
+        // Denúncias por mês (últimos 6 meses)
+        Report.aggregate([
+            {
+                $match: {
+                    createdAt: { $gte: new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000) }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        year: { $year: '$createdAt' },
+                        month: { $month: '$createdAt' }
+                    },
+                    count: { $sum: 1 }
+                }
+            },
+            { $sort: { '_id.year': 1, '_id.month': 1 } }
+        ]),
+        // Denúncias recentes
+        Report.find({}).populate('user', 'name').sort({ createdAt: -1 }).limit(10)
+    ]);
+
+    // Formatar dados
+    const statusStats = reportsByStatus.reduce((acc, item) => {
+        acc[item._id] = item.count;
+        return acc;
+    }, { pending: 0, resolved: 0, rejected: 0 });
+
+    const typeStats = reportsByType.reduce((acc, item) => {
+        acc[item._id] = item.count;
+        return acc;
+    }, {});
+
+    const monthlyStats = reportsByMonth.map(item => ({
+        month: `${item._id.year}-${String(item._id.month).padStart(2, '0')}`,
+        count: item.count
+    }));
+
+    res.status(200).json(new ApiResponse(200, {
+        statusStats,
+        typeStats,
+        monthlyStats,
+        recentReports,
+        totalReports: Object.values(statusStats).reduce((a, b) => a + b, 0)
+    }));
 });

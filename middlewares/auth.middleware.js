@@ -37,9 +37,9 @@ export const isAdmin = (req, res, next) => {
   }
 };
 
-// ===================================================================
-// NOVA FUNÇÃO ADICIONADA AQUI
-// ===================================================================
+// Alias para isAuthenticated (padrão comum)
+export const protect = isAuthenticated;
+
 // Este middleware é "opcional". Ele tenta verificar um utilizador, mas não falha se não houver token.
 export const isAuthenticatedOptional = asyncHandler(async (req, res, next) => {
     const authHeader = req.headers.authorization;
@@ -48,13 +48,10 @@ export const isAuthenticatedOptional = asyncHandler(async (req, res, next) => {
       try {
         const token = authHeader.split(' ')[1];
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        // Anexa o utilizador ao pedido se o token for válido
         req.user = await User.findById(decoded.id).select('-password');
       } catch (error) {
-        // Se o token for inválido ou expirado, simplesmente não fazemos nada e continuamos
         req.user = null;
       }
     }
-    // Continua para a próxima etapa, mesmo que não haja utilizador
     next();
 });
