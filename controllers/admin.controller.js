@@ -382,6 +382,61 @@ export const revokeCertificate = asyncHandler(async (req, res) => {
     res.status(200).json(new ApiResponse(200, certificate, 'Certificado revogado.'));
 });
 
+export const createCertificate = asyncHandler(async (req, res) => {
+    const { userId, courseId } = req.body;
+    
+    if (!userId || !courseId) {
+        throw new ApiError(400, 'ID do usuário e ID do curso são obrigatórios.');
+    }
+    
+    const enrollment = await Enrollment.findOne({ user: userId, course: courseId });
+    if (!enrollment) {
+        throw new ApiError(404, 'Inscrição não encontrada.');
+    }
+    
+    const existingCertificate = await Certificate.findOne({ user: userId, course: courseId });
+    if (existingCertificate) {
+        throw new ApiError(409, 'Certificado já existe para este usuário e curso.');
+    }
+    
+    const certificate = await Certificate.create({
+        user: userId,
+        course: courseId,
+        status: 'issued',
+        issuedAt: new Date()
+    });
+    
+    await Enrollment.findByIdAndUpdate(enrollment._id, { 
+        status: 'completed',
+        progress: 100,
+        completedAt: new Date()
+    });
+    
+    const populatedCertificate = await Certificate.findById(certificate._id)
+        .populate('user', 'name email')
+        .populate('course', 'title');
+    
+    res.status(201).json(new ApiResponse(201, populatedCertificate, 'Certificado criado com sucesso.'));
+});
+
+export const getAllEnrollments = asyncHandler(async (req, res) => {
+    const enrollments = await Enrollment.find({})
+        .populate('user', 'name email')
+        .populate('course', 'title contentType')
+        .sort({ createdAt: -1 });
+    
+    res.status(200).json(new ApiResponse(200, enrollments));
+});
+
+export const getAllCertificates = asyncHandler(async (req, res) => {
+    const certificates = await Certificate.find({})
+        .populate('user', 'name email')
+        .populate('course', 'title contentType')
+        .sort({ createdAt: -1 });
+    
+    res.status(200).json(new ApiResponse(200, certificates));
+});
+
 // =============================================
 // GESTÃO DE CONFIGURAÇÕES
 // =============================================

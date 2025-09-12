@@ -195,14 +195,22 @@ export const accessCourseContent = asyncHandler(async (req, res) => {
  * @access  Private
  */
 export const getAvailableCourses = asyncHandler(async (req, res) => {
-    const userId = req.user._id;
+    let availableCourses;
     
-    const enrolledCourses = await Enrollment.find({ user: userId }).select('course');
-    const enrolledIds = enrolledCourses.map(e => e.course.toString());
-    
-    const availableCourses = await Course.find({ 
-        _id: { $nin: enrolledIds } 
-    }).lean();
+    if (req.user) {
+        // Usuário autenticado - filtrar cursos já inscritos
+        const enrolledCourses = await Enrollment.find({ user: req.user._id }).select('course');
+        const enrolledIds = enrolledCourses.map(e => e.course.toString());
+        
+        const filter = { _id: { $nin: enrolledIds } };
+        if (req.query.type) filter.contentType = req.query.type;
+        
+        availableCourses = await Course.find(filter).lean();
+    } else {
+        // Usuário não autenticado - mostrar todos os cursos
+        const filter = req.query.type ? { contentType: req.query.type } : {};
+        availableCourses = await Course.find(filter).lean();
+    }
     
     const results = availableCourses.map(course => ({
         _id: course._id.toString(),
@@ -214,8 +222,10 @@ export const getAvailableCourses = asyncHandler(async (req, res) => {
         duration: course.duration,
         price: course.price,
         eventDate: course.eventDate,
-        location: course.location
+        eventTime: course.eventTime,
+        location: course.location,
+        maxParticipants: course.maxParticipants
     }));
     
-    res.status(200).json(new ApiResponse(200, results, 'Cursos disponíveis listados.'));
+    res.status(200).json(new ApiResponse(200, results, 'Conteúdo disponível listado.'));
 });

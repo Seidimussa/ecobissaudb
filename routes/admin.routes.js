@@ -19,7 +19,7 @@ import {
     // Comunidades
     createCommunity, getAllCommunities, getCommunityByIdAdmin, updateCommunity, approveCommunity, getPendingCommunities,
     // Certificados
-    getPendingCertificates, issueCertificate, revokeCertificate,
+    getPendingCertificates, issueCertificate, revokeCertificate, createCertificate, getAllEnrollments, getAllCertificates,
     // Configurações
     getSettings, updateSettings,
     // Parceiros
@@ -95,6 +95,9 @@ router.put('/communities/:id/approve', approveCommunity);
 router.route('/certificates/pending').get(getPendingCertificates);
 router.post('/certificates/:id/issue', issueCertificate);
 router.post('/certificates/:id/revoke', revokeCertificate);
+router.post('/certificates/create', createCertificate);
+router.get('/enrollments', getAllEnrollments);
+router.get('/certificates/all', getAllCertificates);
 
 // --- GESTÃO DE CONFIGURAÇÕES ---
 router.route('/settings').get(getSettings).put(updateSettings);

@@ -12,7 +12,7 @@ router.get('/', (req, res, next) => {
 router.get('/:id', isAuthenticatedOptional, getContentById);
 
 // Rotas protegidas
-router.get('/available', protect, (req, res, next) => {
+router.get('/available', isAuthenticatedOptional, (req, res, next) => {
     req.query.type = 'training';
     getAvailableCourses(req, res, next);
 });
