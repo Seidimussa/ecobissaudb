@@ -17,6 +17,7 @@ import partnerRoutes from './partner.routes.js';
 import blogRoutes from './blog.routes.js';
 import courseRoutes from './course.routes.js';
 import trainingRoutes from './training.routes.js';
+import analyticsRoutes from './analytics.routes.js';
 
 const router = express.Router();
 
@@ -43,5 +44,6 @@ router.use('/payments', paymentRoutes);
 router.use('/dashboard', dashboardRoutes);
 router.use('/conversations', conversationRoutes);
 router.use('/admin', adminRoutes);
+router.use('/admin/analytics', analyticsRoutes);
 
 export default router;
