@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { autoIssueCertificate } from '../utils/certificateHelper.js';
 
 const progressSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -20,5 +21,12 @@ const progressSchema = new mongoose.Schema({
   completed: { type: Boolean, default: false },
   completedAt: { type: Date }
 }, { timestamps: true });
+
+// Middleware para emitir certificado automaticamente quando curso é concluído
+progressSchema.post('save', async function(doc) {
+  if (doc.completed && doc.completedAt) {
+    await autoIssueCertificate(doc.user, doc.course);
+  }
+});
 
 export default mongoose.model('Progress', progressSchema);
