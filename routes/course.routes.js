@@ -1,5 +1,6 @@
 import express from 'express';
 import { listContent, getContentById, enrollInCourse, getMyCourses, getPaymentStatus, accessCourseContent, getAvailableCourses } from '../controllers/content.controller.js';
+import { getCourseModules, getCourseProgress, updateLessonProgress } from '../controllers/module.controller.js';
 import { protect, isAuthenticatedOptional } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
