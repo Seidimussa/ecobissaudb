@@ -12,6 +12,7 @@ import Conversation from '../models/Conversation.model.js';
 import Partner from '../models/Partner.model.js';
 import Payment from '../models/Payment.model.js';
 import BlogPost from '../models/BlogPost.model.js';
+import Team from '../models/Team.model.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 import asyncHandler from 'express-async-handler';
@@ -139,18 +140,68 @@ export const createManualEnrollment = asyncHandler(async (req, res) => {
 // =============================================
 // GESTÃO DE PARCEIROS
 // =============================================
+export const getAllPartners = asyncHandler(async (req, res) => {
+    const partners = await Partner.find({}).sort({ createdAt: -1 });
+    res.status(200).json(new ApiResponse(200, partners));
+});
+
 export const addPartner = asyncHandler(async (req, res) => {
     const { name, websiteUrl } = req.body;
     if (!name || !req.file) throw new ApiError(400, "O nome do parceiro e o logótipo são obrigatórios.");
     const newPartner = await Partner.create({ name, websiteUrl, logoUrl: req.file.path });
     res.status(201).json(new ApiResponse(201, newPartner, "Parceiro adicionado com sucesso."));
 });
+export const updatePartner = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { name, websiteUrl } = req.body;
+    const updateData = { name, websiteUrl };
+    if (req.file) updateData.logoUrl = req.file.path;
+    
+    const updatedPartner = await Partner.findByIdAndUpdate(id, updateData, { new: true });
+    if (!updatedPartner) throw new ApiError(404, "Parceiro não encontrado.");
+    res.status(200).json(new ApiResponse(200, updatedPartner, "Parceiro atualizado com sucesso."));
+});
+
 export const deletePartner = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const partner = await Partner.findById(id);
     if (!partner) throw new ApiError(404, "Parceiro não encontrado.");
     await partner.deleteOne();
     res.status(200).json(new ApiResponse(200, null, "Parceiro removido com sucesso."));
+});
+
+// =============================================
+// GESTÃO DE EQUIPE
+// =============================================
+export const getAllTeamMembers = asyncHandler(async (req, res) => {
+    const teamMembers = await Team.find({}).sort({ order: 1, createdAt: -1 });
+    res.status(200).json(new ApiResponse(200, teamMembers));
+});
+
+export const addTeamMember = asyncHandler(async (req, res) => {
+    const { name, description, position, order } = req.body;
+    if (!name || !description || !req.file) throw new ApiError(400, "Nome, descrição e foto são obrigatórios.");
+    const newMember = await Team.create({ name, description, position, order: order || 0, photoUrl: req.file.path });
+    res.status(201).json(new ApiResponse(201, newMember, "Membro da equipe adicionado com sucesso."));
+});
+
+export const updateTeamMember = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { name, description, position, order } = req.body;
+    const updateData = { name, description, position, order };
+    if (req.file) updateData.photoUrl = req.file.path;
+    
+    const updatedMember = await Team.findByIdAndUpdate(id, updateData, { new: true });
+    if (!updatedMember) throw new ApiError(404, "Membro da equipe não encontrado.");
+    res.status(200).json(new ApiResponse(200, updatedMember, "Membro da equipe atualizado com sucesso."));
+});
+
+export const deleteTeamMember = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const member = await Team.findById(id);
+    if (!member) throw new ApiError(404, "Membro da equipe não encontrado.");
+    await member.deleteOne();
+    res.status(200).json(new ApiResponse(200, null, "Membro da equipe removido com sucesso."));
 });
 
 // =============================================
@@ -403,7 +454,8 @@ export const createCertificate = asyncHandler(async (req, res) => {
         user: userId,
         course: courseId,
         status: 'issued',
-        issuedAt: new Date()
+        issuedAt: new Date(),
+        issuedBy: req.user._id // Admin que atribuiu o certificado
     });
     
     await Enrollment.findByIdAndUpdate(enrollment._id, { 

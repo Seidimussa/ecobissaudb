@@ -24,6 +24,13 @@ const certificateSchema = new mongoose.Schema({
         type: Date,
         default: Date.now
     },
+    issuedAt: {
+        type: Date
+    },
+    issuedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
     status: {
         type: String,
         enum: ['pending_approval', 'issued', 'revoked'],

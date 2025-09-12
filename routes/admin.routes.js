@@ -23,7 +23,9 @@ import {
     // Configurações
     getSettings, updateSettings,
     // Parceiros
-    addPartner, deletePartner,
+    addPartner, getAllPartners, updatePartner, deletePartner,
+    // Equipe
+    addTeamMember, getAllTeamMembers, updateTeamMember, deleteTeamMember,
     // Blog Posts
     createBlogPost, getAllBlogPosts, getBlogPostById, updateBlogPost, deleteBlogPost,
     // Analytics
@@ -53,8 +55,18 @@ router.get('/conversations', getAllConversations);
 router.post('/enrollments/manual', createManualEnrollment);
 
 // --- GESTÃO DE PARCEIROS ---
-router.post('/partners', upload.single('logo'), addPartner);
+router.route('/partners')
+    .get(getAllPartners)
+    .post(upload.single('logo'), addPartner);
+router.put('/partners/:id', upload.single('logo'), updatePartner);
 router.delete('/partners/:id', deletePartner);
+
+// --- GESTÃO DE EQUIPE ---
+router.route('/team')
+    .get(getAllTeamMembers)
+    .post(upload.single('photo'), addTeamMember);
+router.put('/team/:id', upload.single('photo'), updateTeamMember);
+router.delete('/team/:id', deleteTeamMember);
 
 // --- GESTÃO DE BLOG POSTS ---
 router.route('/blog')
