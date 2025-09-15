@@ -98,16 +98,29 @@ export const getUserById = asyncHandler(async (req, res) => {
     res.status(200).json(new ApiResponse(200, user));
 });
 export const updateUserByAdmin = asyncHandler(async (req, res) => {
-    const { name, email, role, phone } = req.body;
+    const { name, email, role, phone, canPublishBlog } = req.body;
     const user = await User.findById(req.params.id);
     if (!user) throw new ApiError(404, 'Utilizador não encontrado.');
     user.name = name || user.name;
     user.email = email || user.email;
     user.role = role || user.role;
     user.phone = phone || user.phone;
+    if (canPublishBlog !== undefined) user.canPublishBlog = canPublishBlog;
     const updatedUser = await user.save();
     const userObject = updatedUser.toObject();
     delete userObject.password;
+    
+    // Notificar usuário se recebeu permissão de blog
+    if (canPublishBlog === true) {
+        await createNotification(
+            user._id,
+            'message',
+            'Permissão de Blog Concedida',
+            'Você agora pode publicar posts no blog da plataforma!',
+            null
+        );
+    }
+    
     res.status(200).json(new ApiResponse(200, userObject, 'Utilizador atualizado com sucesso.'));
 });
 export const deleteUser = asyncHandler(async (req, res) => {
@@ -242,8 +255,10 @@ export const createBlogPost = asyncHandler(async (req, res) => {
         }
 
         console.log('A tentar criar o post no banco de dados...');
+        const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
         const newPost = await BlogPost.create({
             title,
+            slug,
             content,
             tags: tags ? tags.split(',').map(tag => tag.trim()) : [],
             isFeatured: isFeaturedBool,
@@ -263,7 +278,7 @@ export const createBlogPost = asyncHandler(async (req, res) => {
 });
 
 export const getAllBlogPosts = asyncHandler(async (req, res) => {
-    const posts = await BlogPost.find({}).populate('author', 'name').sort({ createdAt: -1 });
+    const posts = await BlogPost.find({}).populate('author', 'name _id').sort({ createdAt: -1 });
     res.status(200).json(new ApiResponse(200, posts));
 });
 
@@ -271,6 +286,19 @@ export const getBlogPostById = asyncHandler(async (req, res) => {
     const post = await BlogPost.findById(req.params.id);
     if (!post) throw new ApiError(404, "Post não encontrado.");
     res.status(200).json(new ApiResponse(200, post));
+});
+
+export const getBlogPostBySlug = asyncHandler(async (req, res) => {
+    const post = await BlogPost.findOne({ slug: req.params.slug }).populate('author', 'name profilePicture');
+    if (!post) throw new ApiError(404, "Post não encontrado.");
+    
+    // Buscar outros posts para sidebar
+    const otherPosts = await BlogPost.find({ _id: { $ne: post._id } })
+        .select('title slug coverImageUrl')
+        .limit(3)
+        .sort({ createdAt: -1 });
+    
+    res.status(200).json(new ApiResponse(200, { post, otherPosts }));
 });
 
 export const updateBlogPost = asyncHandler(async (req, res) => {
@@ -293,9 +321,22 @@ export const updateBlogPost = asyncHandler(async (req, res) => {
     res.status(200).json(new ApiResponse(200, updatedPost, "Post atualizado com sucesso."));
 });
 
+export const getMyBlogPosts = asyncHandler(async (req, res) => {
+    const posts = await BlogPost.find({ author: req.user._id })
+        .sort({ createdAt: -1 })
+        .select('title slug coverImageUrl createdAt isFeatured');
+    res.status(200).json(new ApiResponse(200, posts));
+});
+
 export const deleteBlogPost = asyncHandler(async (req, res) => {
     const post = await BlogPost.findById(req.params.id);
     if (!post) throw new ApiError(404, "Post não encontrado.");
+    
+    // Verificar se o usuário é o autor ou admin
+    if (post.author.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+        throw new ApiError(403, "Você não tem permissão para deletar este post.");
+    }
+    
     await post.deleteOne();
     res.status(200).json(new ApiResponse(200, null, "Post removido com sucesso."));
 });

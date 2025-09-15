@@ -64,6 +64,7 @@ export const loginUser = asyncHandler(async (req, res) => {
             email: user.email,
             profilePicture: user.profilePicture,
             role: user.role,
+            canPublishBlog: user.canPublishBlog || false,
         };
 
         res.status(200).json(new ApiResponse(200, {

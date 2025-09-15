@@ -28,6 +28,10 @@ const userSchema = new mongoose.Schema({
         enum: ['user', 'admin'],
         default: 'user'
     },
+    canPublishBlog: {
+        type: Boolean,
+        default: false
+    },
     profilePicture: {
         type: String,
         default: ''

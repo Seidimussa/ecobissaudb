@@ -77,6 +77,12 @@ router.route('/blog/:id')
     .put(upload.single('coverImage'), updateBlogPost)
     .delete(deleteBlogPost);
 
+// --- PERMISSÕES DE BLOG ---
+router.put('/users/:id/blog-permission', (req, res, next) => {
+    req.body.canPublishBlog = req.body.canPublishBlog;
+    updateUserByAdmin(req, res, next);
+});
+
 // --- GESTÃO DE DENÚNCIAS ---
 router.route('/reports').get(getAllReports);
 router.route('/reports/:id').get(getReportById).put(updateReportStatus);

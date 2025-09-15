@@ -1,6 +1,7 @@
 import express from 'express';
 import {
     getUserProfile,
+    getMyProfile,
     updateUserProfile,
     updateUserPassword,
     updateUserAvatar,
@@ -15,6 +16,8 @@ const router = express.Router();
 router.route('/profile')
     .get(isAuthenticated, getUserProfile)
     .put(isAuthenticated, updateUserProfile);
+
+router.get('/me', isAuthenticated, getMyProfile);
 
 router.put('/password', isAuthenticated, updateUserPassword);
 router.post('/avatar', isAuthenticated, upload.single('avatar'), updateUserAvatar);

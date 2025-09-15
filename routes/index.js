@@ -32,6 +32,7 @@ router.use('/tips', tipRoutes);
 router.use('/partners', partnerRoutes);
 router.use('/team', teamRoutes);
 router.use('/blog', blogRoutes);
+router.use('/user-blog', blogRoutes);
 router.use('/courses', courseRoutes);
 router.use('/trainings', trainingRoutes);
 
