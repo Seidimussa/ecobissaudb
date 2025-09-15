@@ -255,6 +255,7 @@ export const createBlogPost = asyncHandler(async (req, res) => {
         }
 
         console.log('A tentar criar o post no banco de dados...');
+        console.log('Author ID:', req.user._id); // Debug
         const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
         const newPost = await BlogPost.create({
             title,
@@ -265,6 +266,7 @@ export const createBlogPost = asyncHandler(async (req, res) => {
             coverImageUrl: req.file.path,
             author: req.user._id
         });
+        console.log('Created post:', newPost); // Debug
         console.log('Post criado com sucesso:', newPost._id);
 
         res.status(201).json(new ApiResponse(201, newPost, "Post do blog criado com sucesso."));
@@ -322,9 +324,11 @@ export const updateBlogPost = asyncHandler(async (req, res) => {
 });
 
 export const getMyBlogPosts = asyncHandler(async (req, res) => {
+    console.log('User ID:', req.user._id); // Debug
     const posts = await BlogPost.find({ author: req.user._id })
         .sort({ createdAt: -1 })
         .select('title slug coverImageUrl createdAt isFeatured');
+    console.log('Found posts:', posts); // Debug
     res.status(200).json(new ApiResponse(200, posts));
 });
 
