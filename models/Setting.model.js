@@ -40,7 +40,12 @@ const settingSchema = new mongoose.Schema({
     socialLinks: {
         facebook: String,
         twitter: String,
-        instagram: String
+        instagram: String,
+        youtube: String,
+        tiktok: String,
+        whatsapp: String,
+        telegram: String,
+        linkedin: String
     },
 
     // Configurações de Notificação
