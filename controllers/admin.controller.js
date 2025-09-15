@@ -15,6 +15,7 @@ import BlogPost from '../models/BlogPost.model.js';
 import Team from '../models/Team.model.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
+import { createNotification } from '../utils/notificationHelper.js';
 import asyncHandler from 'express-async-handler';
 
 // =============================================
@@ -56,6 +57,18 @@ export const sendMessageToUsers = asyncHandler(async (req, res) => {
         messages: [{ sender: adminUserId, body: message }]
     }));
     await Promise.all(conversationPromises);
+    
+    // Criar notificações para os destinatários
+    for (const recipient of recipients) {
+        await createNotification(
+            recipient._id,
+            'message',
+            'Nova Mensagem',
+            `Você recebeu uma nova mensagem: ${subject}`,
+            null
+        );
+    }
+    
     res.status(201).json(new ApiResponse(201, null, `${recipients.length} conversa(s) iniciada(s) com sucesso.`));
 });
 
@@ -302,8 +315,28 @@ export const getReportById = asyncHandler(async (req, res) => {
 export const updateReportStatus = asyncHandler(async (req, res) => {
     const { status } = req.body;
     if (!['pending', 'resolved', 'rejected'].includes(status)) throw new ApiError(400, 'Status inválido.');
-    const report = await Report.findByIdAndUpdate(req.params.id, { status }, { new: true });
+    const report = await Report.findByIdAndUpdate(req.params.id, { status }, { new: true }).populate('user');
     if (!report) throw new ApiError(404, 'Denúncia não encontrada.');
+    
+    // Criar notificação para o usuário
+    if (status === 'resolved') {
+        await createNotification(
+            report.user._id,
+            'report_resolved',
+            'Denúncia Resolvida',
+            `Sua denúncia "${report.title}" foi resolvida.`,
+            report._id
+        );
+    } else if (status === 'rejected') {
+        await createNotification(
+            report.user._id,
+            'report_rejected',
+            'Denúncia Recusada',
+            `Sua denúncia "${report.title}" foi recusada.`,
+            report._id
+        );
+    }
+    
     res.status(200).json(new ApiResponse(200, report, 'Status da denúncia atualizado.'));
 });
 
@@ -314,13 +347,27 @@ export const createContent = asyncHandler(async (req, res) => {
     const contentData = { ...req.body, author: req.user._id };
     if (req.file) contentData.thumbnailUrl = req.file.path;
     
-    // Garantir que contentType está definido
     if (!contentData.contentType) {
-        contentData.contentType = 'course'; // padrão
+        contentData.contentType = 'course';
     }
     
     const newContent = await Course.create(contentData);
     const contentTypeName = contentData.contentType === 'training' ? 'Treinamento' : 'Curso';
+    
+    // Notificar todos os usuários sobre novo conteúdo
+    const users = await User.find({ role: 'user' }).select('_id');
+    const notificationType = contentData.contentType === 'training' ? 'training_published' : 'course_published';
+    
+    for (const user of users) {
+        await createNotification(
+            user._id,
+            notificationType,
+            `Novo ${contentTypeName} Disponível`,
+            `O ${contentTypeName.toLowerCase()} "${newContent.title}" foi publicado.`,
+            newContent._id
+        );
+    }
+    
     res.status(201).json(new ApiResponse(201, newContent, `${contentTypeName} criado com sucesso.`));
 });
 export const getAllContent = asyncHandler(async (req, res) => {
@@ -450,12 +497,14 @@ export const createCertificate = asyncHandler(async (req, res) => {
         throw new ApiError(409, 'Certificado já existe para este usuário e curso.');
     }
     
+    const course = await Course.findById(courseId);
+    
     const certificate = await Certificate.create({
         user: userId,
         course: courseId,
         status: 'issued',
         issuedAt: new Date(),
-        issuedBy: req.user._id // Admin que atribuiu o certificado
+        issuedBy: req.user._id
     });
     
     await Enrollment.findByIdAndUpdate(enrollment._id, { 
@@ -463,6 +512,15 @@ export const createCertificate = asyncHandler(async (req, res) => {
         progress: 100,
         completedAt: new Date()
     });
+    
+    // Criar notificação
+    await createNotification(
+        userId,
+        'certificate_issued',
+        'Certificado Emitido',
+        `Seu certificado do ${course.contentType === 'training' ? 'treinamento' : 'curso'} "${course.title}" foi emitido.`,
+        certificate._id
+    );
     
     const populatedCertificate = await Certificate.findById(certificate._id)
         .populate('user', 'name email')

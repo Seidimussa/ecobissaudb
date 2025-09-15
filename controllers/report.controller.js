@@ -6,6 +6,8 @@ import {
     ApiError
 } from '../utils/ApiError.js';
 import asyncHandler from 'express-async-handler';
+import { createNotificationForUsers } from '../utils/notificationHelper.js';
+import User from '../models/User.model.js';
 
 export const createReport = asyncHandler(async (req, res) => {
     const {
@@ -51,6 +53,21 @@ export const createReport = asyncHandler(async (req, res) => {
     }
 
     const report = await Report.create(reportData);
+    
+    // Notificar todos os admins sobre nova denúncia
+    const admins = await User.find({ role: 'admin' }, '_id');
+    const adminIds = admins.map(admin => admin._id);
+    
+    if (adminIds.length > 0) {
+        await createNotificationForUsers(
+            adminIds,
+            'report_submitted',
+            'Nova Denúncia Recebida',
+            `Nova denúncia: ${title}`,
+            report._id
+        );
+    }
+    
     res.status(201).json(new ApiResponse(201, report, 'Denúncia criada com sucesso.'));
 });
 

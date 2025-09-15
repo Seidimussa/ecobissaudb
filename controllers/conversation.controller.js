@@ -2,6 +2,7 @@ import Conversation from '../models/Conversation.model.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 import asyncHandler from 'express-async-handler';
+import { createNotification } from '../utils/notificationHelper.js';
 
 // Utilizador busca as suas conversas
 export const getMyConversations = asyncHandler(async (req, res) => {
@@ -36,6 +37,18 @@ export const replyToConversation = asyncHandler(async (req, res) => {
 
     // Popula os participantes na resposta para que a UI possa ser atualizada
     await updatedConversation.populate('participants', 'name role profilePicture');
+    
+    // Notificar outros participantes da conversa
+    const otherParticipants = conversation.participants.filter(p => p.toString() !== req.user._id.toString());
+    for (const participantId of otherParticipants) {
+        await createNotification(
+            participantId,
+            'message',
+            'Nova Resposta',
+            `Você recebeu uma nova resposta na conversa: ${conversation.subject}`,
+            conversation._id
+        );
+    }
 
     res.status(201).json(new ApiResponse(201, updatedConversation, "Resposta enviada."));
 });

@@ -19,6 +19,7 @@ import blogRoutes from './blog.routes.js';
 import courseRoutes from './course.routes.js';
 import trainingRoutes from './training.routes.js';
 import analyticsRoutes from './analytics.routes.js';
+import notificationRoutes from './notification.routes.js';
 
 const router = express.Router();
 
@@ -38,6 +39,7 @@ router.use('/trainings', trainingRoutes);
 router.use('/content', contentRoutes);
 
 // --- Rotas Protegidas ---
+router.use('/notifications', notificationRoutes);
 router.use('/users', userRoutes);
 router.use('/reports', reportRoutes);
 router.use('/communities', communityRoutes);

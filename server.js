@@ -3,10 +3,12 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import express from 'express';
 import cors from 'cors';
+import { createServer } from 'http';
 import connectDB from './config/db.js';
 import apiRoutes from './routes/index.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { v2 as cloudinary } from 'cloudinary';
+import { initializeSocket } from './utils/socketManager.js';
 // --- CONFIGURAÇÃO ROBUSTA DO DOTENV ---
 // 1. Obtém o caminho do diretório atual (onde server.js está)
 const __filename = fileURLToPath(import.meta.url);
@@ -34,6 +36,10 @@ cloudinary.config({
 connectDB();
 
 const app = express();
+const server = createServer(app);
+
+// Inicializar Socket.IO
+initializeSocket(server);
 
 // Middlewares
 app.use(cors({
@@ -56,6 +62,6 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
     console.log(`Servidor está rodando em ${process.env.NODE_ENV} na porta ${PORT}`);
 });
