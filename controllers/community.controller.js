@@ -38,8 +38,84 @@ export const createCommunity = asyncHandler(async (req, res) => {
  * @access  Private (requer login)
  */
 export const listApprovedCommunities = asyncHandler(async (req, res) => {
-    const communities = await Community.find({ status: 'approved' }).sort({ name: 1 });
+    const communities = await Community.find({ status: 'approved' }).populate('admin', 'name').sort({ name: 1 });
     res.status(200).json(new ApiResponse(200, communities, "Comunidades encontradas com sucesso."));
+});
+
+export const listPendingCommunities = asyncHandler(async (req, res) => {
+    const communities = await Community.find({ status: 'pending_approval' }).populate('admin', 'name').sort({ createdAt: -1 });
+    res.status(200).json(new ApiResponse(200, communities, "Comunidades pendentes encontradas."));
+});
+
+export const approveCommunity = asyncHandler(async (req, res) => {
+    const community = await Community.findByIdAndUpdate(
+        req.params.id,
+        { status: 'approved' },
+        { new: true }
+    ).populate('admin', 'name');
+    
+    if (!community) {
+        throw new ApiError(404, 'Comunidade não encontrada.');
+    }
+    
+    res.status(200).json(new ApiResponse(200, community, "Comunidade aprovada com sucesso."));
+});
+
+export const rejectCommunity = asyncHandler(async (req, res) => {
+    const community = await Community.findByIdAndUpdate(
+        req.params.id,
+        { status: 'rejected' },
+        { new: true }
+    ).populate('admin', 'name');
+    
+    if (!community) {
+        throw new ApiError(404, 'Comunidade não encontrada.');
+    }
+    
+    res.status(200).json(new ApiResponse(200, community, "Comunidade rejeitada."));
+});
+
+export const blockCommunity = asyncHandler(async (req, res) => {
+    const community = await Community.findByIdAndUpdate(
+        req.params.id,
+        { status: 'blocked' },
+        { new: true }
+    ).populate('admin', 'name');
+    
+    if (!community) {
+        throw new ApiError(404, 'Comunidade não encontrada.');
+    }
+    
+    res.status(200).json(new ApiResponse(200, community, "Comunidade bloqueada."));
+});
+
+export const deleteCommunity = asyncHandler(async (req, res) => {
+    const community = await Community.findByIdAndDelete(req.params.id);
+    
+    if (!community) {
+        throw new ApiError(404, 'Comunidade não encontrada.');
+    }
+    
+    res.status(200).json(new ApiResponse(200, null, "Comunidade eliminada permanentemente."));
+});
+
+export const unblockCommunity = asyncHandler(async (req, res) => {
+    const community = await Community.findByIdAndUpdate(
+        req.params.id,
+        { status: 'approved' },
+        { new: true }
+    ).populate('admin', 'name');
+    
+    if (!community) {
+        throw new ApiError(404, 'Comunidade não encontrada.');
+    }
+    
+    res.status(200).json(new ApiResponse(200, community, "Comunidade desbloqueada."));
+});
+
+export const listBlockedCommunities = asyncHandler(async (req, res) => {
+    const communities = await Community.find({ status: 'blocked' }).populate('admin', 'name').sort({ createdAt: -1 });
+    res.status(200).json(new ApiResponse(200, communities, "Comunidades bloqueadas encontradas."));
 });
 
 /**
