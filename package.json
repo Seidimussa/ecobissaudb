@@ -9,6 +9,10 @@
         "dev": "nodemon server.js",
         "seed": "node data/seed.js",
         "seed:communities": "node data/seedCommunities.js",
+        "seed:trainings": "node data/seedTrainings.js",
+        "create:admin": "node data/createAdmin.js",
+        "seed:team": "node data/seedTeam.js",
+        "restore:team": "node data/restoreOriginalTeam.js",
         "data:destroy": "node data/seed.js -d"
     },
     "keywords": [],

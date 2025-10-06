@@ -1,7 +1,9 @@
 import Report from '../models/Report.model.js';
 import Enrollment from '../models/Enrollment.model.js';
 import Certificate from '../models/Certificate.model.js';
-import Conversation from '../models/Conversation.model.js'; // A importação correta é Conversation
+import Conversation from '../models/Conversation.model.js';
+import Training from '../models/Training.model.js';
+import TrainingEnrollment from '../models/TrainingEnrollment.model.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import asyncHandler from 'express-async-handler';
 import mongoose from 'mongoose';
@@ -14,8 +16,8 @@ import mongoose from 'mongoose';
 export const getUserDashboardSummary = asyncHandler(async (req, res) => {
     const userId = req.user._id;
 
-    // A consulta agora busca por 'unreadConversations' em vez de 'unreadNotifications'
-    const [reportSummary, ongoingCourse, pendingCertificates, unreadConversations] = await Promise.all([
+    // Buscar dados do dashboard incluindo treinamentos disponíveis
+    const [reportSummary, ongoingCourse, pendingCertificates, unreadConversations, availableTrainings] = await Promise.all([
         Report.aggregate([
             { $match: { user: new mongoose.Types.ObjectId(userId) } },
             { $group: { _id: "$status", count: { $sum: 1 } } }
@@ -28,10 +30,15 @@ export const getUserDashboardSummary = asyncHandler(async (req, res) => {
         // Conta as conversas que têm mensagens não lidas que não foram enviadas pelo próprio utilizador.
         Conversation.countDocuments({
             participants: userId,
-            // A consulta abaixo pode ser adicionada depois para mais precisão.
-            // Por agora, vamos contar todas as conversas do utilizador para garantir que funciona.
-            // 'messages.read': false, 
-            // 'messages.sender': { $ne: new mongoose.Types.ObjectId(userId) }
+        }),
+        // Contar treinamentos disponíveis
+        Training.countDocuments({ 
+            status: 'published',
+            eventDate: { $gte: new Date() }, // Apenas treinamentos futuros
+            // Excluir treinamentos em que o usuário já está inscrito
+            _id: { 
+                $nin: await TrainingEnrollment.find({ user: userId }).distinct('training')
+            }
         })
     ]);
 
@@ -46,6 +53,7 @@ export const getUserDashboardSummary = asyncHandler(async (req, res) => {
         reports,
         ongoingCourse,
         pendingCertificates,
-        unreadNotifications: unreadConversations // O frontend espera a chave 'unreadNotifications'
+        unreadNotifications: unreadConversations,
+        availableTrainings // Adicionar contador de treinamentos disponíveis
     }));
 });

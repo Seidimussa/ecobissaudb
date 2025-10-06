@@ -20,6 +20,24 @@ const teamSchema = new mongoose.Schema({
     order: {
         type: Number,
         default: 0
+    },
+    socialMedia: {
+        linkedin: {
+            type: String,
+            default: ''
+        },
+        instagram: {
+            type: String,
+            default: ''
+        },
+        tiktok: {
+            type: String,
+            default: ''
+        },
+        facebook: {
+            type: String,
+            default: ''
+        }
     }
 }, { timestamps: true });
 
