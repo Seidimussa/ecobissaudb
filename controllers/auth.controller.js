@@ -6,7 +6,8 @@ import {
 import {
     ApiError
 } from '../utils/ApiError.js';
-import asyncHandler from 'express-async-handler'; // Um utilitário para evitar try-catch repetitivos
+import asyncHandler from 'express-async-handler';
+import { setUserPreference } from '../middlewares/session.middleware.js';
 
 // @desc    Registrar um novo utilizador
 // @route   POST /api/auth/register
@@ -67,6 +68,17 @@ export const loginUser = asyncHandler(async (req, res) => {
             canPublishBlog: user.canPublishBlog || false,
         };
 
+        // Definir cookie de sessão
+        res.cookie('auth_token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            maxAge: 24 * 60 * 60 * 1000 // 24 horas
+        });
+
+        // Definir preferências padrão
+        setUserPreference(res, 'theme', 'light');
+        setUserPreference(res, 'language', 'pt');
+
         res.status(200).json(new ApiResponse(200, {
             token,
             user: userData
@@ -80,7 +92,10 @@ export const loginUser = asyncHandler(async (req, res) => {
 // @route   POST /api/auth/logout
 // @access  Private
 export const logoutUser = asyncHandler(async (req, res) => {
-    // Para JWT sem estado, o logout é gerido no cliente. O backend apenas confirma.
-    // Lógica de blocklist de tokens poderia ser adicionada aqui.
+    // Limpar cookies de sessão
+    res.clearCookie('auth_token');
+    res.clearCookie('pref_theme');
+    res.clearCookie('pref_language');
+    
     res.status(200).json(new ApiResponse(200, null, 'Logout bem-sucedido.'));
 });

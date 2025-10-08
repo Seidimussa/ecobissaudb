@@ -2,13 +2,14 @@ import express from 'express';
 import { isAuthenticated } from '../middlewares/auth.middleware.js';
 import { canPublishBlog } from '../middlewares/blogAuth.middleware.js';
 import upload from '../middlewares/upload.middleware.js';
+import { cacheMiddleware } from '../middlewares/cache.middleware.js';
 import { createBlogPost, getAllBlogPosts, getBlogPostById, getBlogPostBySlug, getMyBlogPosts, updateBlogPost, deleteBlogPost } from '../controllers/admin.controller.js';
 
 const router = express.Router();
 
-// Rotas públicas
-router.get('/', getAllBlogPosts);
-router.get('/:slug', getBlogPostBySlug);
+// Rotas públicas com cache
+router.get('/', cacheMiddleware(600), getAllBlogPosts); // Cache por 10 minutos
+router.get('/:slug', cacheMiddleware(1800), getBlogPostBySlug); // Cache por 30 minutos
 
 // Rotas para usuários com permissão
 router.use(isAuthenticated);

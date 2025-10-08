@@ -2,6 +2,7 @@ import BlogPost from '../models/BlogPost.model.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 import asyncHandler from 'express-async-handler';
+import { clearCache } from '../middlewares/cache.middleware.js';
 
 /**
  * @desc    Listar todos os posts do blog (público)
@@ -12,6 +13,9 @@ export const listBlogPosts = asyncHandler(async (req, res) => {
     const posts = await BlogPost.find({})
         .populate('author', 'name')
         .sort({ createdAt: -1 });
+    
+    // Cache por 10 minutos
+    res.setHeader('Cache-Control', 'public, max-age=600');
     res.status(200).json(new ApiResponse(200, posts));
 });
 

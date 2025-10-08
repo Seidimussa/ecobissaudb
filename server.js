@@ -9,6 +9,7 @@ import apiRoutes from './routes/index.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { v2 as cloudinary } from 'cloudinary';
 import { initializeSocket } from './utils/socketManager.js';
+import { sessionMiddleware } from './middlewares/session.middleware.js';
 // --- CONFIGURAÇÃO ROBUSTA DO DOTENV ---
 // 1. Obtém o caminho do diretório atual (onde server.js está)
 const __filename = fileURLToPath(import.meta.url);
@@ -48,6 +49,17 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Cache headers para arquivos estáticos
+app.use((req, res, next) => {
+    if (req.url.match(/\.(css|js|png|jpg|jpeg|gif|ico|svg)$/)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 ano
+    }
+    next();
+});
+
+// Middleware de sessão e cookies
+app.use(sessionMiddleware);
 
 // Rota de "saúde" do serviço
 app.get('/', (req, res) => {
