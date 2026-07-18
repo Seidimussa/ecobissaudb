@@ -3,6 +3,9 @@
 
 # Ficheiros de Ambiente (MUITO IMPORTANTE)
 .env
+.env.*
+.env.
+**/.env*
 
 # Logs
 npm-debug.log*

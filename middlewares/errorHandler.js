@@ -12,6 +12,12 @@ const errorHandler = (err, req, res, next) => {
         error = new ApiError(statusCode, message, error.errors || [], error.stack);
     }
 
+    // Log do erro no console do servidor para depuração
+    console.error(`[Erro da API] ${req.method} ${req.originalUrl} -> Status ${error.statusCode}:`, error.message);
+    if (error.stack && process.env.NODE_ENV === "development") {
+        console.error(error.stack);
+    }
+
     const response = {
         ...error,
         message: error.message,

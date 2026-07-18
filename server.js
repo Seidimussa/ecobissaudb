@@ -1,6 +1,4 @@
-import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import './config/env.js';
 import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
@@ -10,15 +8,6 @@ import { errorHandler } from './middlewares/errorHandler.js';
 import { v2 as cloudinary } from 'cloudinary';
 import { initializeSocket } from './utils/socketManager.js';
 import { sessionMiddleware } from './middlewares/session.middleware.js';
-// --- CONFIGURAÇÃO ROBUSTA DO DOTENV ---
-// 1. Obtém o caminho do diretório atual (onde server.js está)
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// 2. Aponta explicitamente para o ficheiro .env na mesma pasta
-// Isto remove qualquer ambiguidade e força o carregamento das variáveis.
-dotenv.config({ path: path.resolve(__dirname, '.env') });
-// --- FIM DA CONFIGURAÇÃO ROBUSTA ---
 
 
 // Debug das variáveis do Cloudinary
@@ -42,9 +31,23 @@ const server = createServer(app);
 // Inicializar Socket.IO
 initializeSocket(server);
 
-// Middlewares
+// Middlewares de CORS robusto para desenvolvimento
+const allowedOrigins = [
+    process.env.FRONTEND_URL,
+    'http://localhost:5173',
+    'http://127.0.0.1:5173'
+].filter(Boolean);
+
 app.use(cors({
-    origin: process.env.FRONTEND_URL,
+    origin: (origin, callback) => {
+        // Permitir requisições sem origem (como mobile apps, curl, etc.)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin) || allowedOrigins.includes(origin + '/')) {
+            return callback(null, true);
+        }
+        console.warn(`[CORS Bloqueado] Origem: ${origin} não está na lista permitida:`, allowedOrigins);
+        return callback(null, new Error('CORS bloqueou esta origem.'));
+    },
     credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));

@@ -7,9 +7,9 @@ import { createBlogPost, getAllBlogPosts, getBlogPostById, getBlogPostBySlug, ge
 
 const router = express.Router();
 
-// Rotas públicas com cache
-router.get('/', cacheMiddleware(600), getAllBlogPosts); // Cache por 10 minutos
-router.get('/:slug', cacheMiddleware(1800), getBlogPostBySlug); // Cache por 30 minutos
+// Rotas públicas (cache removido temporariamente para depuração)
+router.get('/', getAllBlogPosts);
+router.get('/:slug', getBlogPostBySlug);
 
 // Rotas para usuários com permissão
 router.use(isAuthenticated);
